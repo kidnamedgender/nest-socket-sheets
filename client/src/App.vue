@@ -1,77 +1,65 @@
 <script setup>
 import { io } from "socket.io-client";
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 
 onMounted(() => {
-  const onKeyup = (event) => {
-    const message = {
-      cell: event.target.id,
-      value: event.target.value,
-    };
-
-    socket.send(JSON.stringify(message));
-  };
-
-  const generateTable = (table, columns) => {
-    const tr = document.createElement("tr");
-
-    tr.innerHTML =
-      "<td></td>" + columns.map((column) => `<td>${column}</td>`).join("");
-
-    table.appendChild(tr);
-  };
-
-  const generateRow = (table, rowIndex, columns) => {
-    const tr = document.createElement("tr");
-
-    tr.innerHTML =
-      `<td>${rowIndex}</td>` +
-      columns
-        .map(
-          (column) => `<td><input id="${column}${rowIndex}" type="text"></td>`
-        )
-        .join("");
-
-    table.appendChild(tr);
-
-    columns.forEach((column) => {
-      const cellId = `${column}${rowIndex}`;
-
+  COLUMNS.value.forEach((column) => {
+    for (let i = 1; i <= ROWS_COUNT.value; i++) {
+      const cellId = `${column}${i}`;
       const input = document.getElementById(cellId);
-
-      input.addEventListener("keyup", onKeyup);
-
-      cells[cellId] = input;
-    });
-  };
-
-  const fillTable = (table) => {
-    for (let i = 1; i <= ROWS_COUNT; i++) {
-      generateRow(table, i, COLUMNS);
+      cells.value[cellId] = input;
     }
-  };
-
-  const socket = io("http://localhost:3000");
-
-  const table = document.querySelector("#table");
-  const COLUMNS = ["A", "B", "C", "D", "E", "F", "G", "I", "K", "L", "M", "O"];
-  const ROWS_COUNT = 30;
-  const cells = {};
-
-  socket.on("message", (event) => {
-    const data = JSON.parse(event);
-    const cell = cells[data.cell];
-    cell.value = data.value;
   });
+});
 
-  generateTable(table, COLUMNS);
-  fillTable(table);
+const socket = io("http://localhost:3000");
+
+const onKeyup = (event) => {
+  const message = {
+    cell: event.target.id,
+    value: event.target.value,
+  };
+  socket.send(JSON.stringify(message));
+};
+
+const COLUMNS = ref([
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "I",
+  "K",
+  "L",
+  "M",
+  "O",
+]);
+const ROWS_COUNT = ref(30);
+const cells = ref({});
+
+socket.on("message", (event) => {
+  const data = JSON.parse(event);
+  const cell = cells.value[data.cell];
+  cell.value = data.value;
 });
 </script>
 
 <template>
   <div>
-    <table id="table"></table>
+    <table id="table">
+      <tr>
+        <td></td>
+        <td v-for="column in COLUMNS">{{ column }}</td>
+      </tr>
+      <tr v-for="i in ROWS_COUNT">
+        <td>{{ i }}</td>
+        <td v-for="column in COLUMNS">
+          <input :id="column + i" type="text" @keyup="onKeyup" />
+        </td>
+      </tr>
+    </table>
   </div>
 </template>
 
